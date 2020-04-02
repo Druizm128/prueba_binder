@@ -6,7 +6,7 @@ Instrucciones:
 
 * Da click en el botón launch binder abajo.
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Druizm128/cap-py-ejercicios/master)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Geek-End/cap-py-ejercicios/master)
 
 * Abre el jupyter notebook llamado prueba.ipynb
 
