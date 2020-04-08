@@ -1,0 +1,156 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.3
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# Ejercicio componentes principales
+
+```{python}
+# %autosave 0
+import pandas as pd
+import numpy as np
+from plotnine import *
+from numpy.linalg import svd
+```
+
+Datos de whiskies de Escocia:
+
+```{python}
+whisky = pd.read_csv('../datos/whiskies.csv')
+whisky.info()
+```
+
+```{python}
+trad_columnas = {'Body':'Cuerpo', 'Sweetness':'Dulzura', 'Smoky':'Humoso', 'Tobacco':'Tabaco',
+                'Honey':'Miel', 'Spicy':'Picante', 'Winey':'Vinoso', 'Nutty':'Nuez',
+                'Malty':'Malta', 'Fruity':'Afrutado'}
+whisky = whisky.rename(columns=trad_columnas)
+whisky.describe()
+```
+
+Haremos el análisis para algunos whiskies y dejaremos otros fuera
+
+```{python}
+whisky
+```
+
+```{python}
+whisky_entrena = whisky.iloc[0:80, :]
+whisky_prueba = whisky.iloc[80:, :]
+```
+
+### 1. Calcular componentes
+
+
+Calcula componentes para los whiskies del conjunto de entrenamiento
+
+```{python}
+from sklearn.decomposition import PCA
+pca = PCA()
+# ajustar - esto centra los datos automáticamente
+nombres_vars  = whisky.loc[:,'Cuerpo':'Floral'].columns
+whisky_pca = # aquí tu código
+# varianza explicada
+var_componente = np.append(0, whisky_pca.explained_variance_)
+var_acumulada = # calcula acumulado
+var_acumulada_pct = # calcula
+
+var_pct_df = pd.DataFrame({'varianza_acum':var_acumulada_pct,
+                          'varianza_comp':var_componente}).reset_index()
+var_pct_df
+```
+
+Grafica e interpreta la varianza acumulada
+
+```{python}
+(ggplot(var_pct_df, aes('index', 'varianza_acum')) + geom_line() + geom_point())
+```
+
+Haz una *gráfica de sedimentación* de la varianza explicada por componente (componente vs varianza explicada de la componente.
+
+```{python}
+# calcula los datos
+graf_scree_df = #filtra el primer elemento
+# grafica
+#(ggplot())
+```
+
+**Idea de gráfica de sedimentación**: Escoger las componentes que aportan mucho, detenernos cuando no aportan mucha 
+    varianza relativa. ¿Cuántas componentes seleccionamos según este criterio?
+
+
+## 2. Interpretar componentes
+
+
+Interpreta las primeras dos componentes usando los pesos:
+
+```{python}
+comps_2 = #saca primeras dos componentes
+comps_df = pd.DataFrame(comps_2)
+comps_df.index = nombres_vars
+comps_df # ordena para interpetar componente 1
+
+```
+
+```{python}
+comps_df # ordena para interpetar componente 2
+
+```
+
+**Interpretación**
+
+1. La componente uno xxxxxxxxxx
+2. La componente dos xxxxxxxxxxxx
+
+
+### 3. Graficar
+
+
+Grafica los scores de los whiskies para las primeras dos componentes. 
+
+```{python}
+scores = # calcula scores
+scores.shape
+scores_2 = scores[:, 0:2]
+scores_entrena_df = pd.DataFrame(scores_2).rename(columns = {0:'Comp_1', 1:'Comp_2'})
+scores_entrena_df
+```
+
+```{python}
+##grafica 
+## (ggplot(
+```
+
+### 4. Ajustar para nuevos datos
+
+
+Ahora calcula los scores de los whiskies (usando transform, sin reajustar) que dejamos fuera. Agrega el nombre de la destilería.
+
+```{python}
+scores_prueba = whisky_pca.transform(whisky_prueba.loc[:,'Cuerpo':'Floral'])[: ,0:2]
+scores_prueba_df = pd.DataFrame(scores_prueba).rename(columns = {0:'Comp_1', 1:'Comp_2'})
+scores_prueba_df['destilería'] = whisky_prueba['Distillery'].values
+scores_prueba_df
+```
+
+Ahora añade estos puntos a la gráfica anterior. Pon las etiquetas de estos nuevos 8 whiskies:
+
+```{python}
+scores_entrena_df['destilería'] = ''
+scores_entrena_df['tipo'] = 'entrena'
+scores_prueba_df['tipo'] = 'prueba'
+scores = pd.concat([scores_entrena_df, scores_prueba_df], sort=False)
+(ggplot(scores, aes('Comp_1', 'Comp_2', color='tipo', label='destilería')) + geom_point() + geom_text())
+```
+
+**Pregunta extra**: Haz cuadrantes y ponle nombres a los cuadrantes, para crear una *gráfica de consultor*

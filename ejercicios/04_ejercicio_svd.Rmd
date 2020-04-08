@@ -1,0 +1,236 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.3
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# Ejercicio: SVD para marginación por estado
+
+
+Buscaremos representaciones de dimensión uno para los datos de marginación (2010) a nivel municipio de CONAPO.
+
+```{python}
+# %autosave 0
+import pandas as pd
+import numpy as np
+from plotnine import *
+from numpy.linalg import svd
+```
+
+## 1. Tabla por estado
+
+
+Leemos los datos y vemos una descripción
+
+```{python}
+marginacion = pd.read_csv("../datos/imm-2010.csv")
+descrip = pd.read_csv("../datos/imm-2010-descrip.csv", skiprows=2)
+pd.set_option('max_colwidth', 200)
+descrip
+```
+
+```{python}
+marginacion
+```
+
+Calcularemos la tabla a nivel estado. Los pesos serán
+
+```{python}
+marg_tabla = marginacion.loc[:,'ANALF':'PO2SM']
+marg_tabla['estado'] = marginacion['NOM_ENT']
+wt = marginacion['POB_TOT']
+wt
+```
+
+```{python}
+def media_pob(x):
+    # esta funcion calcula media ponderada por población 
+    return sum(x * wt[x.index]) / sum(wt[x.index])
+# usar la función agg
+estado_tbl = marg_tabla.groupby('estado').agg(media_pob)
+estado_tbl
+```
+
+Normalizamos
+
+```{python}
+estado_tbl_est = # escribe tu codigo de estandarización aquí (media y desviación estándar por ejemplo)
+```
+
+Con esta tabla vamos calcular la DVS (Descomposición en valores singulares)
+
+
+## 2. Descomposición en valores singulares
+
+```{python}
+u, s, vt = #aquí tu codigo
+v = vt.transpose()
+```
+
+Veamos los tamaños de cada componente:
+
+```{python}
+print(u.shape)
+print(v.shape)
+print(s.shape)
+```
+
+Veamos cómo se ven las matrices:
+
+```{python}
+v_df = pd.DataFrame(v)
+v_df['variable'] = estado_tbl.columns
+v_df.set_index('variable')
+v_df
+```
+
+```{python}
+u_df = pd.DataFrame(u)
+u_df['estado'] = estado_tbl.index
+u_df.set_index('estado')
+u_df.sort_values(0)
+```
+
+## 3. Calidad de representación
+
+
+Ahora recordamos que la calidad de la aproximación se puede calcular a partir de los valores singulares
+
+```{python}
+s
+```
+
+```{python}
+# calcula la calidad acumulada, y la contribucion de cada dimensión
+total = #completa
+acumulado = # completa, usa np.cumsum
+contribucion = #completa
+acum_df = pd.DataFrame({'acumulado':acumulado, 'contribucion':contribucion})
+acum_df.round(3)
+```
+
+Las primeras tres dimensiones tienen calidad de 88\%, y la primera es mucho más importante
+
+
+## 4. Interpretación
+
+
+Si en la primera componente todos los valores de u y de v son negativos, podemos multiplicar ambos por -1 sin cambiar nada en la descomposición, y facilitamos la interpretación
+
+```{python}
+if(v[0,0] < 0):
+    u[:, 0] = - u[:,0]
+    v[:, 0] = - v[:,0]
+
+#scores
+u_df = pd.DataFrame(u)
+u_df['estado'] = estado_tbl.index
+u_df.set_index('estado')
+#pesos
+v_df = pd.DataFrame(v)
+v_df['variable'] = estado_tbl.columns
+v_df.set_index('variable')
+
+v_df.round(2).sort_values(1)
+
+```
+
+Ahora nótese que:
+
+1. La primera componente es un promedio ponderado de todas las variables. Este es un índice de marginación a nivel estado.
+2. La segunda componente tiene valores altos para las variable de piso de tierra, carencia de electiricidad y agua entubada, y valores negativos para carencia de drenaje.
+
+Por lo tanto:
+
+1. Aquellos estados con score alto en la primera componente tienden a tener niveles altos en todas las variables: son estados más marginados
+2. Aquellos estados con score alto en la segunda componente tienden a tener realtivamente más carencia de electricidad, agua y piso de tierra (infraestructura básica). Los de score negativo más bien tienen carencia de drenaje (¿por qué es diferente drenaje a agua entubada por ejemplo?), hacinamiento y bajos salarios.
+
+Veamos los estados en las primeras dos dimensiones:
+
+```{python}
+#import sys
+#!{sys.executable} -m pip install adjustText
+```
+
+```{python}
+import plotnine
+plotnine.theme_set(plotnine.theme_minimal())
+from adjustText import adjust_text
+
+u_graf = u_df.copy()
+u_graf.columns = u_graf.columns.astype('str')
+u_graf.reset_index(inplace=True)
+adjust_pars = {'expand_points': (1.5, 1.5), 'arrowprops': {'arrowstyle': '-', 'color':'gray'}}
+(ggplot(u_graf, aes('0', '1', label = 'estado')) + geom_point(color="red") + 
+    geom_text(size=8, color="gray", adjust_text = adjust_pars) +
+    xlab('Dimensión 1') + ylab('Dimensión 2') )
+```
+
+**Pregunta 1**: compara baja california sur con Tlaxcala, que son similares en marginación pero tienen
+muy distintos valores en la dimensión 2 
+
+**Pregunta 2**: puedes explicar por qué Yucatán sale tan bajo en la dimensión 2?
+
+
+```{python}
+# pregunta 1
+# filtra para contestar esta pregunta usa la tabla estandarizada para empezar
+
+
+```
+
+Aquí escribe tu interpretación:
+
+
+```{python}
+#  pregunta 2 agregamos yucatán
+
+```
+
+Aqui tu explicación_
+
+
+
+
+Podemos colorear estas tablas para examinarlas mejor:
+
+```{python}
+def color_negative_red(val):
+    """
+    Takes a scalar and returns a string with
+    the css property `'color: red'` for negative
+    strings, black otherwise.
+    """
+    color = 'gray'
+    if val < -0.2:
+        color = 'red'
+    if val > 0.2:
+        color= 'black'
+    return 'color: %s' % color
+
+tabla_color = estado_tbl_est.loc[('Yucatan','Baja California Sur' , 'Tlaxcala'), :]. \
+    round(1). \
+    style.applymap(color_negative_red)
+tabla_color
+```
+
+## 5. Verificar SVD
+
+
+Finalmente, verificamos que en efecto se cumple la SVD para estos datos cuando usamos todas las dimensiones
+
+```{python}
+# hacer el cálculo de la svd
+approx = np.matmul(u * s, v.transpose())
+# ver que son iguales
+np.max(abs(estado_tbl_est.values - approx)).round(10)
+```
